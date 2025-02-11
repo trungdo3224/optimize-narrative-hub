@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import Button from "@/components/Button";
 import TextEditor from "@/components/TextEditor";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import Header from "@/components/Header";
 
 const Index = () => {
   const [originalText, setOriginalText] = useState("");
@@ -20,7 +20,7 @@ const Index = () => {
     setIsOptimizing(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         toast.error("Please sign in to optimize content");
         return;
@@ -55,6 +55,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <Header />
       <div className="container max-w-7xl mx-auto px-4 py-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
