@@ -54,7 +54,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       <div className="container max-w-7xl mx-auto px-4 py-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -62,12 +62,11 @@ const Index = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-4">
-            SEO Article Optimizer
+          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">
+            SEO Content Optimizer
           </h1>
-          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
-            Transform your content into SEO-optimized articles with our intelligent
-            optimization engine.
+          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            Transform your content into SEO-optimized articles with our AI-powered optimization engine
           </p>
         </motion.div>
 
@@ -78,8 +77,8 @@ const Index = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="space-y-4"
           >
-            <div className="backdrop-blur-lg bg-white/30 p-6 rounded-xl border border-gray-100 shadow-sm">
-              <h2 className="text-xl font-semibold mb-4">Original Content</h2>
+            <div className="glass-morphism p-6 rounded-xl">
+              <h2 className="text-xl font-semibold mb-4 dark:text-white">Original Content</h2>
               <TextEditor
                 value={originalText}
                 onChange={(e) => setOriginalText(e.target.value)}
@@ -95,13 +94,13 @@ const Index = () => {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="space-y-4"
           >
-            <div className="backdrop-blur-lg bg-white/30 p-6 rounded-xl border border-gray-100 shadow-sm">
-              <h2 className="text-xl font-semibold mb-4">Optimized Content</h2>
+            <div className="glass-morphism p-6 rounded-xl">
+              <h2 className="text-xl font-semibold mb-4 dark:text-white">Optimized Content</h2>
               <TextEditor
                 value={optimizedText}
                 readOnly
                 placeholder="Your optimized content will appear here..."
-                className="bg-gray-50"
+                className="bg-white/5 dark:bg-black/5"
               />
             </div>
           </motion.div>
@@ -117,7 +116,7 @@ const Index = () => {
             onClick={handleOptimize}
             size="lg"
             disabled={isOptimizing}
-            className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary transform hover:scale-105 transition-all duration-300"
+            className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 transform hover:scale-105 transition-all duration-300"
           >
             {isOptimizing ? "Optimizing..." : "Optimize Content"}
           </Button>

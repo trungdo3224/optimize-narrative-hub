@@ -1,6 +1,5 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import OpenAI from 'https://esm.sh/openai@4.28.0'
 import { serve } from "https://deno.fresh.runtime.dev/server.ts";
 
 const corsHeaders = {
@@ -20,16 +19,15 @@ serve(async (req) => {
 
   try {
     // Get credentials from environment variables
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-    if (!openaiApiKey) {
-      throw new Error('Missing OpenAI API key')
+    if (!geminiApiKey) {
+      throw new Error('Missing Gemini API key')
     }
 
-    // Initialize OpenAI and Supabase clients
-    const openai = new OpenAI({ apiKey: openaiApiKey })
+    // Initialize Supabase client
     const supabase = createClient(supabaseUrl!, supabaseServiceRoleKey!)
 
     // Get user token from request header
@@ -67,30 +65,41 @@ serve(async (req) => {
       throw new Error('Failed to create history entry')
     }
 
-    // Get SEO optimization from OpenAI
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: `You are an SEO expert. Analyze and optimize the given content following these guidelines:
-            - Improve readability and structure
-            - Optimize keyword usage and density
-            - Add relevant LSI keywords
-            - Suggest better headings and meta descriptions
-            - Enhance content structure with proper heading hierarchy
-            Return the optimized content along with a detailed analysis of changes made.`
+    // Get SEO optimization from Gemini
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        {
-          role: "user",
-          content: text
-        }
-      ],
-      temperature: 0.7,
-    })
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `As an SEO expert, optimize the following content. Follow these guidelines:
+                - Improve readability and structure
+                - Optimize keyword usage and density
+                - Add relevant LSI keywords
+                - Suggest better headings and meta descriptions
+                - Enhance content structure with proper heading hierarchy
+                
+                Content to optimize:
+                ${text}`
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+          },
+        }),
+      }
+    );
 
-    const optimizedContent = completion.choices[0].message.content
-    const seoScore = Math.floor(Math.random() * 30) + 70 // Placeholder scoring logic
+    const data = await response.json();
+    const optimizedContent = data.candidates[0].content.parts[0].text;
+    const seoScore = Math.floor(Math.random() * 30) + 70; // Placeholder scoring logic
 
     // Update optimization history with results
     const { error: updateError } = await supabase
@@ -102,7 +111,7 @@ serve(async (req) => {
         optimization_details: {
           score: seoScore,
           timestamp: new Date().toISOString(),
-          model: "gpt-4"
+          model: "gemini-pro"
         }
       })
       .eq('id', historyEntry.id)
@@ -125,6 +134,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
+    console.error('Optimization error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {
