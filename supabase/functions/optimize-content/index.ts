@@ -1,9 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { serve } from "https://deno.fresh.runtime.dev/server.ts";
+import { serve } from "https://deno.land/std@0.200.0/http/server.ts"
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': 'http://localhost:8080',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
+  'Access-Control-Allow-Credentials': 'true',
 }
 
 interface RequestBody {
@@ -11,13 +13,11 @@ interface RequestBody {
 }
 
 serve(async (req) => {
-  // Handle CORS
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // Get credentials from environment variables
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -26,22 +26,18 @@ serve(async (req) => {
       throw new Error('Missing Gemini API key')
     }
 
-    // Initialize Supabase client
     const supabase = createClient(supabaseUrl!, supabaseServiceRoleKey!)
 
-    // Get user token from request header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       throw new Error('Missing authorization header')
     }
 
-    // Get original text from request body
     const { text }: RequestBody = await req.json()
     if (!text) {
       throw new Error('Missing text in request body')
     }
 
-    // Get user information from the token
     const { data: { user }, error: userError } = await supabase.auth.getUser(
       authHeader.replace('Bearer ', '')
     )
@@ -49,7 +45,6 @@ serve(async (req) => {
       throw new Error('Invalid user token')
     }
 
-    // Create optimization history entry
     const { data: historyEntry, error: historyError } = await supabase
       .from('optimization_history')
       .insert({
@@ -61,10 +56,10 @@ serve(async (req) => {
       .single()
 
     if (historyError) {
+      console.error("History entry creation error:", historyError);
       throw new Error('Failed to create history entry')
     }
 
-    // Get SEO optimization from Gemini
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
       {
@@ -81,7 +76,7 @@ serve(async (req) => {
                 - Add relevant LSI keywords
                 - Suggest better headings and meta descriptions
                 - Enhance content structure with proper heading hierarchy
-                
+
                 Content to optimize:
                 ${text}`
             }]
@@ -96,11 +91,20 @@ serve(async (req) => {
       }
     );
 
-    const data = await response.json();
-    const optimizedContent = data.candidates[0].content.parts[0].text;
-    const seoScore = Math.floor(Math.random() * 30) + 70; // Placeholder scoring logic
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Gemini API error:", response.status, errorText);
+      throw new Error(`Gemini API request failed with status ${response.status}: ${errorText}`);
+    }
 
-    // Update optimization history with results
+    const data = await response.json();
+    if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
+      console.error("Gemini API response error: Missing candidates or content parts", data);
+      throw new Error("Gemini API response missing content");
+    }
+    const optimizedContent = data.candidates[0].content.parts[0].text;
+    const seoScore = Math.floor(Math.random() * 30) + 70;
+
     const { error: updateError } = await supabase
       .from('optimization_history')
       .update({
@@ -116,6 +120,7 @@ serve(async (req) => {
       .eq('id', historyEntry.id)
 
     if (updateError) {
+      console.error("History entry update error:", updateError);
       throw new Error('Failed to update optimization results')
     }
 
@@ -132,8 +137,8 @@ serve(async (req) => {
       }
     )
 
-  } catch (error) {
-    console.error('Optimization error:', error);
+  } catch (error: any) {
+    console.error('Optimization function error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

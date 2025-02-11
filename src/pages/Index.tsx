@@ -26,6 +26,8 @@ const Index = () => {
         return;
       }
 
+      const requestBody = JSON.stringify({ text: originalText });
+
       const response = await fetch(
         'https://ielivqlbpmcqpixcbpdc.supabase.co/functions/v1/optimize-content',
         {
@@ -34,25 +36,27 @@ const Index = () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ text: originalText }),
+          body: requestBody,
         }
       );
 
       if (!response.ok) {
-        throw new Error('Optimization failed');
+        const errorText = await response.text(); // Read the error text
+        throw new Error(`Optimization failed with status ${response.status}: ${errorText}`);
       }
 
-      const data = await response.json();
+      // *** KEY CHANGE: Read JSON ONCE ***
+      const data = await response.json(); // Read JSON response
+
       setOptimizedText(data.optimized_text);
       toast.success(`Content optimized! SEO Score: ${data.seo_score}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Optimization error:', error);
-      toast.error("Failed to optimize content. Please try again.");
+      toast.error(`Failed to optimize content: ${error.message}`);
     } finally {
       setIsOptimizing(false);
     }
   };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       <Header />
@@ -70,6 +74,11 @@ const Index = () => {
             Transform your content into SEO-optimized articles with our AI-powered optimization engine
           </p>
         </motion.div>
+
+        <div className="flex justify-end space-x-2 mb-4">
+          {/* Sign-in and Sign-up buttons */}
+        </div>
+
 
         <div className="grid md:grid-cols-2 gap-8">
           <motion.div
@@ -92,7 +101,7 @@ const Index = () => {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
             className="space-y-4"
           >
             <div className="glass-morphism p-6 rounded-xl">
