@@ -20,9 +20,16 @@ const Header: React.FC = () => {
   return (
     <header className="sticky top-0 bg-background border-b z-50">
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="font-bold text-xl">
-          Optimize Narrative Hub
-        </Link>
+        <div className="flex items-center gap-6">
+          <Link to="/" className="font-bold text-xl">
+            Optimize Narrative Hub
+          </Link>
+          {session && (
+            <Link to="/history" className="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+              History
+            </Link>
+          )}
+        </div>
         <nav className="flex items-center space-x-4">
           {session ? (
             <UserMenu />
@@ -46,4 +53,4 @@ const Header: React.FC = () => {
   );
 };
 
-export default Header;
+export default Header

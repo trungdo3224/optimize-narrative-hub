@@ -9,7 +9,7 @@ const corsHeaders = {
 }
 
 interface RequestBody {
-  text: string;
+  tags: string[];
 }
 
 serve(async (req) => {
@@ -33,9 +33,9 @@ serve(async (req) => {
       throw new Error('Missing authorization header')
     }
 
-    const { text }: RequestBody = await req.json()
-    if (!text) {
-      throw new Error('Missing text in request body')
+    const { tags }: RequestBody = await req.json()
+    if (!tags || !Array.isArray(tags)) {
+      throw new Error('Missing tags in request body')
     }
 
     const { data: { user }, error: userError } = await supabase.auth.getUser(
@@ -45,20 +45,7 @@ serve(async (req) => {
       throw new Error('Invalid user token')
     }
 
-    const { data: historyEntry, error: historyError } = await supabase
-      .from('optimization_history')
-      .insert({
-        user_id: user.id,
-        original_text: text,
-        status: 'processing'
-      })
-      .select()
-      .single()
-
-    if (historyError) {
-      console.error("History entry creation error:", historyError);
-      throw new Error('Failed to create history entry')
-    }
+    const prompt = `Generate an informative article about ${tags.join(", ")}. The article should be well-structured and include relevant information about all selected topics.`;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
@@ -70,15 +57,7 @@ serve(async (req) => {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `As an SEO expert, optimize the following content. Follow these guidelines:
-                - Improve readability and structure
-                - Optimize keyword usage and density
-                - Add relevant LSI keywords
-                - Suggest better headings and meta descriptions
-                - Enhance content structure with proper heading hierarchy
-
-                Content to optimize:
-                ${text}`
+              text: prompt
             }]
           }],
           generationConfig: {
@@ -102,32 +81,11 @@ serve(async (req) => {
       console.error("Gemini API response error: Missing candidates or content parts", data);
       throw new Error("Gemini API response missing content");
     }
-    const optimizedContent = data.candidates[0].content.parts[0].text;
-    const seoScore = Math.floor(Math.random() * 30) + 70;
-
-    const { error: updateError } = await supabase
-      .from('optimization_history')
-      .update({
-        optimized_text: optimizedContent,
-        seo_score: seoScore,
-        status: 'completed',
-        optimization_details: {
-          score: seoScore,
-          timestamp: new Date().toISOString(),
-          model: "gemini-pro"
-        }
-      })
-      .eq('id', historyEntry.id)
-
-    if (updateError) {
-      console.error("History entry update error:", updateError);
-      throw new Error('Failed to update optimization results')
-    }
+    const generatedText = data.candidates[0].content.parts[0].text;
 
     return new Response(
       JSON.stringify({
-        optimized_text: optimizedContent,
-        seo_score: seoScore
+        content: generatedText,
       }),
       {
         headers: {
